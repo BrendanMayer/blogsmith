@@ -58,6 +58,10 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Commit and push the published post."
     )
+    publish_parser.add_argument(
+        "--message",
+        help="Custom Git commit message when using --push."
+    )
     
     edit_parser = subparsers.add_parser("edit", help="Open a draft or post in your editor.")
     edit_parser.add_argument("slug", help="Draft/post slug or filename.")
@@ -135,10 +139,12 @@ def main() -> None:
         print(f"Published post: {path}")
 
         if args.push:
+            commit_message = args.message or f"Add blog post: {path.stem}"
+
             commit_and_push(
                 repo_path=config.site_repo_path,
                 files=[path],
-                message=f"Add blog post: {path.stem}",
+                message=commit_message,
             )
             print("Committed and pushed post.")
     
