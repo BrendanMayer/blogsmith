@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "blogsmith"
+version = "0.1.0"
+description = "A local CLI tool for creating and publishing Jekyll blog posts."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "python-frontmatter>=1.1.0",
+    "markdown>=3.6"
+]
+
+[project.scripts]
+blogsmith = "blogsmith.cli:main"
