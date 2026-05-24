@@ -33,3 +33,18 @@ def create_draft(
     path.write_text(frontmatter.dumps(post), encoding="utf-8")
 
     return path
+
+
+def list_markdown_files(directory: Path) -> list[Path]:
+    if not directory.exists():
+        return []
+
+    return sorted(directory.glob("*.md"))
+
+
+def list_drafts(config: BlogsmithConfig) -> list[Path]:
+    return list_markdown_files(config.drafts_path)
+
+
+def list_posts(config: BlogsmithConfig) -> list[Path]:
+    return list_markdown_files(config.posts_path)

@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 
 from blogsmith.config import load_config, write_default_config
-from blogsmith.posts import create_draft
+from blogsmith.posts import create_draft, list_drafts, list_posts
 
 
 def parse_tags(tags: str | None) -> list[str]:
@@ -27,7 +27,20 @@ def build_parser() -> argparse.ArgumentParser:
     new_parser.add_argument("--tags", help="Comma-separated tags.")
     new_parser.add_argument("--excerpt", default="", help="Short post summary.")
 
+    subparsers.add_parser("list", help="List drafts and published posts.")
+
     return parser
+
+
+def print_files(label: str, files: list[Path]) -> None:
+    print(f"\n{label}")
+
+    if not files:
+        print("  None")
+        return
+
+    for file in files:
+        print(f"  - {file.name}")
 
 
 def main() -> None:
@@ -49,3 +62,7 @@ def main() -> None:
             excerpt=args.excerpt,
         )
         print(f"Created draft: {path}")
+
+    elif args.command == "list":
+        print_files("Drafts", list_drafts(config))
+        print_files("Published Posts", list_posts(config))
