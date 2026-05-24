@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 
 from blogsmith.config import load_config, write_default_config
-from blogsmith.posts import create_draft, list_drafts, list_posts
+from blogsmith.posts import create_draft, list_drafts, list_posts, publish_draft
 
 
 def parse_tags(tags: str | None) -> list[str]:
@@ -28,6 +28,10 @@ def build_parser() -> argparse.ArgumentParser:
     new_parser.add_argument("--excerpt", default="", help="Short post summary.")
 
     subparsers.add_parser("list", help="List drafts and published posts.")
+
+    publish_parser = subparsers.add_parser("publish", help="Publish a draft.")
+    publish_parser.add_argument("slug", help="Draft slug or filename.")
+    publish_parser.add_argument("--date", help="Publish date in YYYY-MM-DD format.")
 
     return parser
 
@@ -66,3 +70,11 @@ def main() -> None:
     elif args.command == "list":
         print_files("Drafts", list_drafts(config))
         print_files("Published Posts", list_posts(config))
+
+    elif args.command == "publish":
+        path = publish_draft(
+            config=config,
+            slug_or_filename=args.slug,
+            publish_date=args.date,
+        )
+        print(f"Published post: {path}")
