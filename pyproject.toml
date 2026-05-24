@@ -10,8 +10,10 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "python-frontmatter>=1.1.0",
-    "markdown>=3.6"
+    "markdown>=3.6",
+    "PySide6>=6.7.0"
 ]
 
 [project.scripts]
 blogsmith = "blogsmith.cli:main"
+blogsmith-gui = "blogsmith.gui.app:main"
