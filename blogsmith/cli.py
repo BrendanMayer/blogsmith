@@ -18,6 +18,8 @@ from blogsmith.posts import (
 
 from blogsmith.preview import open_preview
 
+from blogsmith.validation import validate_post_file
+
 
 def parse_tags(tags: str | None) -> list[str]:
     if not tags:
@@ -57,6 +59,9 @@ def build_parser() -> argparse.ArgumentParser:
     
     preview_parser = subparsers.add_parser("preview", help="Preview a draft or post in the browser.")
     preview_parser.add_argument("slug", help="Draft/post slug or filename.")
+    
+    validate_parser = subparsers.add_parser("validate", help="Validate a draft or post.")
+    validate_parser.add_argument("slug", help="Draft/post slug or filename.")
 
     return parser
 
@@ -127,3 +132,15 @@ def main() -> None:
         path = find_any_post_file(config, args.slug)
         preview_path = open_preview(path)
         print(f"Opened preview: {preview_path}")
+        
+    elif args.command == "validate":
+        path = find_any_post_file(config, args.slug)
+        errors = validate_post_file(path)
+
+        if errors:
+            print(f"Validation failed: {path}")
+            for error in errors:
+                print(f"  - {error}")
+            raise SystemExit(1)
+
+        print(f"Validation passed: {path}")
