@@ -48,8 +48,10 @@ def ensure_clean_working_tree(repo_path: Path) -> None:
 
 
 def commit_and_push(repo_path: Path, files: list[Path], message: str) -> None:
+    repo_root = repo_path.resolve()
+
     relative_files = [
-        str(file.resolve().relative_to(repo_path.resolve()))
+        str(file.resolve().relative_to(repo_root))
         for file in files
     ]
 

@@ -64,7 +64,7 @@ def publish_draft(
     config: BlogsmithConfig,
     slug_or_filename: str,
     publish_date: str | None = None,
-) -> Path:
+) -> tuple[Path, Path]:
     config.posts_path.mkdir(parents=True, exist_ok=True)
 
     draft_path = find_draft(config, slug_or_filename)
@@ -88,7 +88,7 @@ def publish_draft(
     published_path.write_text(frontmatter.dumps(post), encoding="utf-8")
     draft_path.unlink()
 
-    return published_path
+    return published_path, draft_path
 
 def find_any_post_file(config: BlogsmithConfig, slug_or_filename: str) -> Path:
     slug = slug_or_filename.removesuffix(".md")

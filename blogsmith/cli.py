@@ -4,10 +4,9 @@ from pathlib import Path
 from blogsmith.config import load_config, write_default_config
 from blogsmith.git_service import (
     commit_and_push,
-    ensure_clean_working_tree,
+    validate_git_repo,
     latest_commit,
     remote_url,
-    validate_git_repo,
     working_tree_status,
     current_branch,
 )
@@ -118,12 +117,10 @@ def main() -> None:
         print_files("Published Posts", list_posts(config))
 
     elif args.command == "publish":
+
         validate_git_repo(config.site_repo_path, config.branch)
 
-        if args.push:
-            ensure_clean_working_tree(config.site_repo_path)
-
-        path = publish_draft(
+        path, draft_path = publish_draft(
             config=config,
             slug_or_filename=args.slug,
             publish_date=args.date,
@@ -137,7 +134,6 @@ def main() -> None:
             raise SystemExit(1)
 
         print(f"Published post: {path}")
-
         if args.push:
             commit_message = args.message or f"Add blog post: {path.stem}"
 
