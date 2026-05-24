@@ -16,6 +16,8 @@ from blogsmith.posts import (
     publish_draft,
 )
 
+from blogsmith.preview import open_preview
+
 
 def parse_tags(tags: str | None) -> list[str]:
     if not tags:
@@ -52,6 +54,9 @@ def build_parser() -> argparse.ArgumentParser:
     
     edit_parser = subparsers.add_parser("edit", help="Open a draft or post in your editor.")
     edit_parser.add_argument("slug", help="Draft/post slug or filename.")
+    
+    preview_parser = subparsers.add_parser("preview", help="Preview a draft or post in the browser.")
+    preview_parser.add_argument("slug", help="Draft/post slug or filename.")
 
     return parser
 
@@ -117,3 +122,8 @@ def main() -> None:
         path = find_any_post_file(config, args.slug)
         open_in_editor(path)
         print(f"Opened: {path}")
+        
+    elif args.command == "preview":
+        path = find_any_post_file(config, args.slug)
+        preview_path = open_preview(path)
+        print(f"Opened preview: {preview_path}")
