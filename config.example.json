@@ -1,0 +1,7 @@
+{
+  "site_repo_path": "/path/to/BrendanMayer.github.io",
+  "posts_dir": "_posts",
+  "drafts_dir": "_drafts",
+  "assets_dir": "assets/images/blog",
+  "branch": "main"
+}
