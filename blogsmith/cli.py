@@ -19,10 +19,9 @@ from blogsmith.posts import (
     list_posts,
     publish_draft,
 )
-
 from blogsmith.preview import open_preview
-
 from blogsmith.validation import validate_post_file
+from blogsmith.images import import_image
 
 
 def parse_tags(tags: str | None) -> list[str]:
@@ -68,6 +67,11 @@ def build_parser() -> argparse.ArgumentParser:
     
     validate_parser = subparsers.add_parser("validate", help="Validate a draft or post.")
     validate_parser.add_argument("slug", help="Draft/post slug or filename.")
+    
+    image_parser = subparsers.add_parser("image", help="Import an image for a post.")
+    image_parser.add_argument("slug", help="Post slug.")
+    image_parser.add_argument("image_path", help="Path to the image.")
+    image_parser.add_argument("--alt", default="", help="Image alt text.")
     
     
 
@@ -174,3 +178,15 @@ def main() -> None:
             print(status)
         else:
             print("\nWorking tree clean.")
+    
+    elif args.command == "image":
+        image_path, markdown = import_image(
+            config=config,
+            post_slug=args.slug,
+            source_image=Path(args.image_path),
+            alt_text=args.alt,
+        )
+
+        print(f"Imported image: {image_path}")
+        print("\nMarkdown:")
+        print(markdown)
