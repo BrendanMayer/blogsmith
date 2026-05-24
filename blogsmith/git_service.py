@@ -37,6 +37,16 @@ def validate_git_repo(repo_path: Path, expected_branch: str) -> None:
         )
 
 
+def ensure_clean_working_tree(repo_path: Path) -> None:
+    status = working_tree_status(repo_path)
+
+    if status:
+        raise ValueError(
+            "Portfolio repo has uncommitted changes. "
+            "Commit, stash, or discard them before publishing."
+        )
+
+
 def commit_and_push(repo_path: Path, files: list[Path], message: str) -> None:
     relative_files = [
         str(file.resolve().relative_to(repo_path.resolve()))

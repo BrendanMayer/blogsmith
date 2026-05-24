@@ -2,7 +2,11 @@ import argparse
 from pathlib import Path
 
 from blogsmith.config import load_config, write_default_config
-from blogsmith.git_service import commit_and_push, validate_git_repo
+from blogsmith.git_service import (
+    commit_and_push,
+    ensure_clean_working_tree,
+    validate_git_repo,
+)
 from blogsmith.posts import create_draft, list_drafts, list_posts, publish_draft
 
 
@@ -79,6 +83,9 @@ def main() -> None:
 
     elif args.command == "publish":
         validate_git_repo(config.site_repo_path, config.branch)
+
+        if args.push:
+            ensure_clean_working_tree(config.site_repo_path)
 
         path = publish_draft(
             config=config,
