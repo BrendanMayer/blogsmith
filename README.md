@@ -22,3 +22,28 @@ cd blogsmith
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .
+```
+
+## Version 2 workflow
+```bash
+Preview a draft or post:
+
+blogsmith preview building-a-unity-dialogue-system
+
+Validate front matter and content:
+
+blogsmith validate building-a-unity-dialogue-system
+
+Check linked portfolio repository status:
+
+blogsmith status
+
+Import an image into the portfolio repository:
+
+blogsmith image building-a-unity-dialogue-system "C:\path\to\screenshot.png" --alt "Dialogue graph screenshot"
+
+Publish with a custom commit message:
+
+blogsmith publish building-a-unity-dialogue-system --push --message "Add dialogue system blog post"
+```
+
