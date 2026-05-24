@@ -2,6 +2,7 @@ import argparse
 from pathlib import Path
 
 from blogsmith.config import load_config, write_default_config
+from blogsmith.git_service import commit_and_push, validate_git_repo
 from blogsmith.posts import create_draft, list_drafts, list_posts, publish_draft
 
 
@@ -32,6 +33,11 @@ def build_parser() -> argparse.ArgumentParser:
     publish_parser = subparsers.add_parser("publish", help="Publish a draft.")
     publish_parser.add_argument("slug", help="Draft slug or filename.")
     publish_parser.add_argument("--date", help="Publish date in YYYY-MM-DD format.")
+    publish_parser.add_argument(
+        "--push",
+        action="store_true",
+        help="Commit and push the published post."
+    )
 
     return parser
 
@@ -72,9 +78,20 @@ def main() -> None:
         print_files("Published Posts", list_posts(config))
 
     elif args.command == "publish":
+        validate_git_repo(config.site_repo_path, config.branch)
+
         path = publish_draft(
             config=config,
             slug_or_filename=args.slug,
             publish_date=args.date,
         )
+
         print(f"Published post: {path}")
+
+        if args.push:
+            commit_and_push(
+                repo_path=config.site_repo_path,
+                files=[path],
+                message=f"Add blog post: {path.stem}",
+            )
+            print("Committed and pushed post.")
