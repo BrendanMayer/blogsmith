@@ -112,6 +112,13 @@ def main() -> None:
             slug_or_filename=args.slug,
             publish_date=args.date,
         )
+        
+        errors = validate_post_file(path)
+        if errors:
+            print(f"Published file failed validation: {path}")
+            for error in errors:
+                print(f"  - {error}")
+            raise SystemExit(1)
 
         print(f"Published post: {path}")
 
