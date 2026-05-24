@@ -7,7 +7,14 @@ from blogsmith.git_service import (
     ensure_clean_working_tree,
     validate_git_repo,
 )
-from blogsmith.posts import create_draft, list_drafts, list_posts, publish_draft
+from blogsmith.editor import open_in_editor
+from blogsmith.posts import (
+    create_draft,
+    find_any_post_file,
+    list_drafts,
+    list_posts,
+    publish_draft,
+)
 
 
 def parse_tags(tags: str | None) -> list[str]:
@@ -42,6 +49,9 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Commit and push the published post."
     )
+    
+    edit_parser = subparsers.add_parser("edit", help="Open a draft or post in your editor.")
+    edit_parser.add_argument("slug", help="Draft/post slug or filename.")
 
     return parser
 
@@ -102,3 +112,8 @@ def main() -> None:
                 message=f"Add blog post: {path.stem}",
             )
             print("Committed and pushed post.")
+    
+    elif args.command == "edit":
+        path = find_any_post_file(config, args.slug)
+        open_in_editor(path)
+        print(f"Opened: {path}")

@@ -89,3 +89,16 @@ def publish_draft(
     draft_path.unlink()
 
     return published_path
+
+def find_any_post_file(config: BlogsmithConfig, slug_or_filename: str) -> Path:
+    slug = slug_or_filename.removesuffix(".md")
+
+    draft_path = config.drafts_path / f"{slug}.md"
+    if draft_path.exists():
+        return draft_path
+
+    for post in list_posts(config):
+        if post.name.endswith(f"{slug}.md") or post.stem.endswith(slug):
+            return post
+
+    raise FileNotFoundError(f"No draft or post found matching: {slug_or_filename}")
