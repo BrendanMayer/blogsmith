@@ -47,3 +47,13 @@ Publish with a custom commit message:
 blogsmith publish building-a-unity-dialogue-system --push --message "Add dialogue system blog post"
 ```
 
+## All Commands
+
+blogsmith new "Building a Unity Dialogue System" --tags "unity,csharp,tools" --excerpt "How I built a lightweight dialogue system."
+blogsmith edit building-a-unity-dialogue-system
+blogsmith image building-a-unity-dialogue-system "C:\Users\brend\Pictures\dialogue-graph.png" --alt "Dialogue graph"
+blogsmith preview building-a-unity-dialogue-system
+blogsmith validate building-a-unity-dialogue-system
+blogsmith status
+blogsmith publish building-a-unity-dialogue-system --push --message "Add dialogue system blog post"
+
