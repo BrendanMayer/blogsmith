@@ -5,7 +5,11 @@ from blogsmith.config import load_config, write_default_config
 from blogsmith.git_service import (
     commit_and_push,
     ensure_clean_working_tree,
+    latest_commit,
+    remote_url,
     validate_git_repo,
+    working_tree_status,
+    current_branch,
 )
 from blogsmith.editor import open_in_editor
 from blogsmith.posts import (
@@ -37,6 +41,8 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     subparsers.add_parser("init", help="Create a local Blogsmith config file.")
+    
+    subparsers.add_parser("status", help="Show linked site repository status.")
 
     new_parser = subparsers.add_parser("new", help="Create a new blog draft.")
     new_parser.add_argument("title", help="The title of the blog post.")
@@ -62,6 +68,8 @@ def build_parser() -> argparse.ArgumentParser:
     
     validate_parser = subparsers.add_parser("validate", help="Validate a draft or post.")
     validate_parser.add_argument("slug", help="Draft/post slug or filename.")
+    
+    
 
     return parser
 
@@ -151,3 +159,18 @@ def main() -> None:
             raise SystemExit(1)
 
         print(f"Validation passed: {path}")
+        
+    elif args.command == "status":
+        validate_git_repo(config.site_repo_path, config.branch)
+
+        print(f"Site repo: {config.site_repo_path}")
+        print(f"Branch: {current_branch(config.site_repo_path)}")
+        print(f"Remote: {remote_url(config.site_repo_path)}")
+        print(f"Latest commit: {latest_commit(config.site_repo_path)}")
+
+        status = working_tree_status(config.site_repo_path)
+        if status:
+            print("\nUncommitted changes:")
+            print(status)
+        else:
+            print("\nWorking tree clean.")

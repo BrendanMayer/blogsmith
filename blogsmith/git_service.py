@@ -56,3 +56,10 @@ def commit_and_push(repo_path: Path, files: list[Path], message: str) -> None:
     run_git(["add", *relative_files], repo_path)
     run_git(["commit", "-m", message], repo_path)
     run_git(["push"], repo_path)
+    
+def remote_url(repo_path: Path) -> str:
+    return run_git(["remote", "get-url", "origin"], repo_path)
+
+
+def latest_commit(repo_path: Path) -> str:
+    return run_git(["log", "-1", "--oneline"], repo_path)
