@@ -73,6 +73,7 @@ class BlogsmithWindow(QMainWindow):
         self.setCentralWidget(root)
 
         self.post_list.itemClicked.connect(self.load_selected_post)
+        self.save_button.clicked.connect(self.save_current_post)
 
         self.refresh_posts()
 
@@ -95,6 +96,18 @@ class BlogsmithWindow(QMainWindow):
         self.current_path = path
         self.file_label.setText(str(path))
         self.editor.setPlainText(path.read_text(encoding="utf-8"))
+        
+    def save_current_post(self) -> None:
+        if self.current_path is None:
+            self.statusBar().showMessage("No file selected.", 3000)
+            return
+
+        self.current_path.write_text(
+            self.editor.toPlainText(),
+            encoding="utf-8",
+        )
+
+        self.statusBar().showMessage(f"Saved {self.current_path.name}", 3000)
 
 
 def main() -> None:
