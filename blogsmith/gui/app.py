@@ -1,18 +1,73 @@
 import sys
+from pathlib import Path
 
-from PySide6.QtWidgets import QApplication, QLabel, QMainWindow
+from PySide6.QtWidgets import (
+    QApplication,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QMainWindow,
+    QPushButton,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
+
+from blogsmith.config import load_config
+from blogsmith.posts import list_drafts, list_posts
 
 
 class BlogsmithWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
 
-        self.setWindowTitle("Blogsmith")
-        self.resize(1100, 750)
+        self.config = load_config()
+        self.current_path: Path | None = None
 
-        label = QLabel("Blogsmith Desktop Editor")
-        label.setStyleSheet("font-size: 24px; padding: 24px;")
-        self.setCentralWidget(label)
+        self.setWindowTitle("Blogsmith")
+        self.resize(1200, 800)
+
+        self.post_list = QListWidget()
+        self.editor = QTextEdit()
+
+        self.new_button = QPushButton("New")
+        self.save_button = QPushButton("Save")
+        self.preview_button = QPushButton("Preview")
+        self.validate_button = QPushButton("Validate")
+        self.publish_button = QPushButton("Publish")
+
+        sidebar = QVBoxLayout()
+        sidebar.addWidget(QLabel("Posts"))
+        sidebar.addWidget(self.post_list)
+        sidebar.addWidget(self.new_button)
+        sidebar.addWidget(self.save_button)
+        sidebar.addWidget(self.preview_button)
+        sidebar.addWidget(self.validate_button)
+        sidebar.addWidget(self.publish_button)
+
+        main_layout = QHBoxLayout()
+        sidebar_widget = QWidget()
+        sidebar_widget.setLayout(sidebar)
+        sidebar_widget.setFixedWidth(320)
+
+        main_layout.addWidget(sidebar_widget)
+        main_layout.addWidget(self.editor)
+
+        root = QWidget()
+        root.setLayout(main_layout)
+
+        self.setCentralWidget(root)
+
+        self.refresh_posts()
+
+    def refresh_posts(self) -> None:
+        self.post_list.clear()
+
+        for draft in list_drafts(self.config):
+            self.post_list.addItem(f"Draft | {draft.name}")
+
+        for post in list_posts(self.config):
+            self.post_list.addItem(f"Post  | {post.name}")
 
 
 def main() -> None:
