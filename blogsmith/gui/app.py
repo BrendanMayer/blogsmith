@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 
 from blogsmith.config import load_config
 from blogsmith.posts import create_draft, list_drafts, list_posts
+from blogsmith.validation import validate_post_file
 
 import frontmatter
 import markdown
@@ -149,6 +150,7 @@ class BlogsmithWindow(QMainWindow):
         self.new_button.clicked.connect(self.open_new_draft_dialog)
         self.save_button.clicked.connect(self.save_current_post)
         self.preview_button.clicked.connect(self.preview_current_post)
+        self.validate_button.clicked.connect(self.validate_current_post)
 
         self.refresh_posts()
 
@@ -245,6 +247,28 @@ class BlogsmithWindow(QMainWindow):
         dialog = PreviewDialog(title=title, html=html)
         dialog.exec()
         
+    def validate_current_post(self) -> None:
+        if self.current_path is None:
+            QMessageBox.information(self, "No file selected", "Select a post first.")
+            return
+
+        self.save_current_post()
+
+        errors = validate_post_file(self.current_path)
+
+        if errors:
+            QMessageBox.warning(
+                self,
+                "Validation failed",
+                "\n".join(errors),
+            )
+            return
+
+        QMessageBox.information(
+            self,
+            "Validation passed",
+            "This post looks ready.",
+        )
     
 
 
