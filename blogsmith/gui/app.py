@@ -18,10 +18,14 @@ from PySide6.QtWidgets import (
     QTextEdit,
     QVBoxLayout,
     QWidget,
+    QTextBrowser,
 )
 
 from blogsmith.config import load_config
 from blogsmith.posts import create_draft, list_drafts, list_posts
+
+import frontmatter
+import markdown
 
 
 FILE_PATH_ROLE = Qt.ItemDataRole.UserRole
@@ -71,6 +75,25 @@ class NewDraftDialog(QDialog):
     @property
     def excerpt(self) -> str:
         return self.excerpt_input.toPlainText().strip()
+    
+class PreviewDialog(QDialog):
+    def __init__(self, title: str, html: str) -> None:
+        super().__init__()
+
+        self.setWindowTitle(f"Preview: {title}")
+        self.resize(900, 700)
+
+        browser = QTextBrowser()
+        browser.setHtml(html)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        buttons.rejected.connect(self.reject)
+
+        layout = QVBoxLayout()
+        layout.addWidget(browser)
+        layout.addWidget(buttons)
+
+        self.setLayout(layout)
 
 class BlogsmithWindow(QMainWindow):
     def __init__(self) -> None:
@@ -125,6 +148,7 @@ class BlogsmithWindow(QMainWindow):
         self.post_list.itemClicked.connect(self.load_selected_post)
         self.new_button.clicked.connect(self.open_new_draft_dialog)
         self.save_button.clicked.connect(self.save_current_post)
+        self.preview_button.clicked.connect(self.preview_current_post)
 
         self.refresh_posts()
 
@@ -186,6 +210,42 @@ class BlogsmithWindow(QMainWindow):
         self.refresh_posts()
         self.load_path(path)
         self.statusBar().showMessage(f"Created draft {path.name}", 3000)
+        
+    def preview_current_post(self) -> None:
+        if self.current_path is None:
+            QMessageBox.information(self, "No file selected", "Select a post first.")
+            return
+
+        self.save_current_post()
+
+        try:
+            post = frontmatter.loads(
+                self.current_path.read_text(encoding="utf-8")
+            )
+            body_html = markdown.markdown(
+                post.content,
+                extensions=["fenced_code", "tables", "toc"],
+            )
+        except Exception as exc:
+            QMessageBox.critical(self, "Preview failed", str(exc))
+            return
+
+        title = post.metadata.get("title", self.current_path.stem)
+
+        html = f"""
+        <html>
+          <body style="font-family: system-ui; line-height: 1.6;">
+            <h1>{title}</h1>
+            <hr>
+            {body_html}
+          </body>
+        </html>
+        """
+
+        dialog = PreviewDialog(title=title, html=html)
+        dialog.exec()
+        
+    
 
 
 def main() -> None:
