@@ -138,14 +138,31 @@ class NewDraftDialog(QDialog):
         self.setWindowTitle("New Draft")
 
         self.title_input = QLineEdit()
+        self.title_input.setPlaceholderText("Example: Building a Unity Dialogue System")
+        self.title_input.setToolTip(
+            "The visible title of your blog post. This usually becomes the H1 heading and helps generate the filename slug."
+        )
+
         self.tags_input = QLineEdit()
+        self.tags_input.setPlaceholderText("Example: unity, csharp, tools")
+        self.tags_input.setToolTip(
+            "Comma-separated topics. These help group posts on your portfolio and make filtering/search easier."
+        )
+
         self.excerpt_input = QTextEdit()
         self.excerpt_input.setFixedHeight(90)
+        self.excerpt_input.setPlaceholderText(
+            "Example: How I built a lightweight dialogue system for Unity with branching choices and reusable nodes."
+        )
+        self.excerpt_input.setToolTip(
+            "A short summary of the post. Usually shown on blog cards, previews, search results, and SEO metadata. "
+            "Think of it as the elevator pitch for the article."
+        )
 
         form = QFormLayout()
         form.addRow("Title", self.title_input)
         form.addRow("Tags", self.tags_input)
-        form.addRow("Excerpt", self.excerpt_input)
+        form.addRow("Excerpt / summary", self.excerpt_input)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok
@@ -173,6 +190,8 @@ class NewDraftDialog(QDialog):
     def excerpt(self) -> str:
         return self.excerpt_input.toPlainText().strip()
     
+    
+    
         
 class PublishDialog(QDialog):
     def __init__(self, default_message: str) -> None:
@@ -181,6 +200,16 @@ class PublishDialog(QDialog):
         self.setWindowTitle("Publish Draft")
 
         self.message_input = QLineEdit(default_message)
+        self.message_input.setPlaceholderText("Example: Add blog post about Unity dialogue system")
+        self.message_input.setToolTip(
+            "This is the Git commit message used when Blogsmith commits the published post to your portfolio repository."
+        )
+
+        self.push_checkbox = QCheckBox("Commit and push to GitHub after publishing")
+        self.push_checkbox.setChecked(True)
+        self.push_checkbox.setToolTip(
+            "If enabled, Blogsmith will commit this post and push it using your existing local Git authentication."
+        )
 
         form = QFormLayout()
         form.addRow("Commit message", self.message_input)
@@ -195,6 +224,7 @@ class PublishDialog(QDialog):
 
         layout = QVBoxLayout()
         layout.addLayout(form)
+        layout.addWidget(self.push_checkbox)
         layout.addWidget(buttons)
 
         self.setLayout(layout)
@@ -202,6 +232,10 @@ class PublishDialog(QDialog):
     @property
     def commit_message(self) -> str:
         return self.message_input.text().strip()
+    
+    @property
+    def should_push(self) -> bool:
+        return self.push_checkbox.isChecked()
 
 class BlogsmithWindow(QMainWindow):
     def __init__(self) -> None:
@@ -371,28 +405,28 @@ class BlogsmithWindow(QMainWindow):
         self.preview_tabs.setCurrentWidget(self.preview_browser)
         self.statusBar().showMessage("Preview updated.", 3000)
             
-        def validate_current_post(self) -> None:
-            if self.current_path is None:
-                QMessageBox.information(self, "No file selected", "Select a post first.")
-                return
+    def validate_current_post(self) -> None:
+        if self.current_path is None:
+            QMessageBox.information(self, "No file selected", "Select a post first.")
+            return
 
-            self.save_current_post()
+        self.save_current_post()
 
-            errors = validate_post_file(self.current_path)
+        errors = validate_post_file(self.current_path)
 
-            if errors:
-                QMessageBox.warning(
-                    self,
-                    "Validation failed",
-                    "\n".join(errors),
-                )
-                return
-
-            QMessageBox.information(
+        if errors:
+            QMessageBox.warning(
                 self,
-                "Validation passed",
-                "This post looks ready.",
+                "Validation failed",
+                "\n".join(errors),
             )
+            return
+
+        QMessageBox.information(
+            self,
+            "Validation passed",
+            "This post looks ready.",
+        )
         
     def publish_current_post(self) -> None:
         if self.current_path is None:
@@ -424,12 +458,7 @@ class BlogsmithWindow(QMainWindow):
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
 
-        should_push = QMessageBox.question(
-            self,
-            "Push to GitHub?",
-            "Publish, commit, and push this post to GitHub?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
+        should_push = dialog.should_push
 
         try:
             validate_git_repo(self.config.site_repo_path, self.config.branch)
@@ -439,7 +468,7 @@ class BlogsmithWindow(QMainWindow):
                 slug_or_filename=self.current_path.stem,
             )
 
-            if should_push == QMessageBox.StandardButton.Yes:
+            if should_push:
                 commit_and_push(
                     repo_path=self.config.site_repo_path,
                     files=[published_path],
