@@ -17,3 +17,8 @@ dependencies = [
 [project.scripts]
 blogsmith = "blogsmith.cli:main"
 blogsmith-gui = "blogsmith.gui.app:main"
+
+[project.optional-dependencies]
+dev = [
+    "pyinstaller>=6.0",
+]

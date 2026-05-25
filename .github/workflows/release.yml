@@ -1,0 +1,56 @@
+name: Build and Release Blogsmith
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build Windows EXE
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Blogsmith and build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Build Blogsmith EXE
+        run: |
+          pyinstaller `
+            --name Blogsmith `
+            --windowed `
+            --onefile `
+            tools\blogsmith_gui_entry.py
+
+      - name: Rename EXE with version
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}"
+          New-Item -ItemType Directory -Force -Path release
+          Copy-Item "dist\Blogsmith.exe" "release\Blogsmith-$version-windows.exe"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Blogsmith-Windows-EXE
+          path: release/Blogsmith-${{ github.ref_name }}-windows.exe
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Blogsmith ${{ github.ref_name }}
+          generate_release_notes: true
+          files: release/Blogsmith-${{ github.ref_name }}-windows.exe
