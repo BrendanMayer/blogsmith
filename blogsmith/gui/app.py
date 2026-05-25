@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
@@ -19,6 +19,9 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QTextBrowser,
+    QSplitter,
+    QTabWidget,
+    QCheckBox,
 )
 
 from blogsmith.config import load_config
@@ -34,6 +37,98 @@ FILE_PATH_ROLE = Qt.ItemDataRole.UserRole
 
 def parse_tags(raw_tags: str) -> list[str]:
     return [tag.strip() for tag in raw_tags.split(",") if tag.strip()]
+
+def render_preview_html(markdown_text: str, fallback_title: str = "Untitled") -> str:
+    try:
+        post = frontmatter.loads(markdown_text)
+        title = post.metadata.get("title", fallback_title)
+        date = post.metadata.get("date", "")
+        tags = post.metadata.get("tags", [])
+        excerpt = post.metadata.get("excerpt", "")
+        body_html = markdown.markdown(
+            post.content,
+            extensions=["fenced_code", "tables", "toc"],
+        )
+
+        if isinstance(tags, list):
+            tag_text = ", ".join(str(tag) for tag in tags)
+        else:
+            tag_text = str(tags)
+
+        return f"""
+        <!doctype html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body {{
+                    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                    line-height: 1.65;
+                    padding: 24px;
+                    color: #f2f2f2;
+                    background: #111;
+                }}
+                h1, h2, h3 {{
+                    line-height: 1.25;
+                }}
+                pre {{
+                    background: #1f1f1f;
+                    padding: 14px;
+                    border-radius: 8px;
+                    overflow-x: auto;
+                }}
+                code {{
+                    font-family: Consolas, monospace;
+                }}
+                img {{
+                    max-width: 100%;
+                    border-radius: 8px;
+                }}
+                blockquote {{
+                    border-left: 4px solid #666;
+                    padding-left: 12px;
+                    color: #ccc;
+                }}
+                table {{
+                    border-collapse: collapse;
+                    width: 100%;
+                }}
+                th, td {{
+                    border: 1px solid #444;
+                    padding: 8px;
+                }}
+                .meta {{
+                    color: #aaa;
+                    border-bottom: 1px solid #333;
+                    margin-bottom: 24px;
+                    padding-bottom: 16px;
+                }}
+                .excerpt {{
+                    font-style: italic;
+                    color: #ccc;
+                }}
+            </style>
+        </head>
+        <body>
+            <h1>{title}</h1>
+            <div class="meta">
+                <p><strong>Date:</strong> {date}</p>
+                <p><strong>Tags:</strong> {tag_text}</p>
+                <p class="excerpt"><strong>Excerpt:</strong> {excerpt}</p>
+            </div>
+            {body_html}
+        </body>
+        </html>
+        """
+    except Exception as exc:
+        return f"""
+        <html>
+        <body style="font-family: system-ui; padding: 24px;">
+            <h2>Preview error</h2>
+            <p>{exc}</p>
+        </body>
+        </html>
+        """
 
 
 class NewDraftDialog(QDialog):
@@ -78,24 +173,6 @@ class NewDraftDialog(QDialog):
     def excerpt(self) -> str:
         return self.excerpt_input.toPlainText().strip()
     
-class PreviewDialog(QDialog):
-    def __init__(self, title: str, html: str) -> None:
-        super().__init__()
-
-        self.setWindowTitle(f"Preview: {title}")
-        self.resize(900, 700)
-
-        browser = QTextBrowser()
-        browser.setHtml(html)
-
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
-        buttons.rejected.connect(self.reject)
-
-        layout = QVBoxLayout()
-        layout.addWidget(browser)
-        layout.addWidget(buttons)
-
-        self.setLayout(layout)
         
 class PublishDialog(QDialog):
     def __init__(self, default_message: str) -> None:
@@ -160,16 +237,37 @@ class BlogsmithWindow(QMainWindow):
         sidebar_widget.setLayout(sidebar)
         sidebar_widget.setFixedWidth(320)
 
+        self.preview_browser = QTextBrowser()
+        self.preview_browser.setOpenExternalLinks(True)
+
+        self.preview_tabs = QTabWidget()
+        self.preview_tabs.addTab(self.preview_browser, "Live Preview")
+
+        self.word_count_label = QLabel("Words: 0")
+        self.validation_label = QLabel("Validation: Not checked")
+
+        editor_header = QHBoxLayout()
+        editor_header.addWidget(self.file_label)
+        editor_header.addStretch()
+        editor_header.addWidget(self.word_count_label)
+        editor_header.addWidget(self.validation_label)
+
         editor_layout = QVBoxLayout()
-        editor_layout.addWidget(self.file_label)
+        editor_layout.addLayout(editor_header)
         editor_layout.addWidget(self.editor)
 
         editor_widget = QWidget()
         editor_widget.setLayout(editor_layout)
 
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.addWidget(editor_widget)
+        splitter.addWidget(self.preview_tabs)
+        splitter.setStretchFactor(0, 3)
+        splitter.setStretchFactor(1, 2)
+
         main_layout = QHBoxLayout()
         main_layout.addWidget(sidebar_widget)
-        main_layout.addWidget(editor_widget)
+        main_layout.addWidget(splitter)
 
         root = QWidget()
         root.setLayout(main_layout)
@@ -182,6 +280,13 @@ class BlogsmithWindow(QMainWindow):
         self.preview_button.clicked.connect(self.preview_current_post)
         self.validate_button.clicked.connect(self.validate_current_post)
         self.publish_button.clicked.connect(self.publish_current_post)
+        
+        self.preview_timer = QTimer(self)
+        self.preview_timer.setSingleShot(True)
+        self.preview_timer.setInterval(250)
+        self.preview_timer.timeout.connect(self.update_live_preview)
+
+        self.editor.textChanged.connect(self.on_editor_changed)
 
         self.refresh_posts()
 
