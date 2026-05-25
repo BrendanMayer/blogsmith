@@ -22,7 +22,8 @@ from PySide6.QtWidgets import (
 )
 
 from blogsmith.config import load_config
-from blogsmith.posts import create_draft, list_drafts, list_posts
+from blogsmith.posts import create_draft, list_drafts, list_posts, publish_draft
+from blogsmith.git_service import commit_and_push, validate_git_repo
 from blogsmith.validation import validate_post_file
 
 import frontmatter
@@ -95,6 +96,35 @@ class PreviewDialog(QDialog):
         layout.addWidget(buttons)
 
         self.setLayout(layout)
+        
+class PublishDialog(QDialog):
+    def __init__(self, default_message: str) -> None:
+        super().__init__()
+
+        self.setWindowTitle("Publish Draft")
+
+        self.message_input = QLineEdit(default_message)
+
+        form = QFormLayout()
+        form.addRow("Commit message", self.message_input)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel
+        )
+
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+
+        layout = QVBoxLayout()
+        layout.addLayout(form)
+        layout.addWidget(buttons)
+
+        self.setLayout(layout)
+
+    @property
+    def commit_message(self) -> str:
+        return self.message_input.text().strip()
 
 class BlogsmithWindow(QMainWindow):
     def __init__(self) -> None:
@@ -151,9 +181,20 @@ class BlogsmithWindow(QMainWindow):
         self.save_button.clicked.connect(self.save_current_post)
         self.preview_button.clicked.connect(self.preview_current_post)
         self.validate_button.clicked.connect(self.validate_current_post)
+        self.publish_button.clicked.connect(self.publish_current_post)
 
         self.refresh_posts()
 
+    def current_is_draft(self) -> bool:
+        if self.current_path is None:
+            return False
+
+        try:
+            self.current_path.relative_to(self.config.drafts_path)
+            return True
+        except ValueError:
+            return False
+        
     def refresh_posts(self) -> None:
         self.post_list.clear()
 
@@ -269,6 +310,74 @@ class BlogsmithWindow(QMainWindow):
             "Validation passed",
             "This post looks ready.",
         )
+        
+    def publish_current_post(self) -> None:
+        if self.current_path is None:
+            QMessageBox.information(self, "No file selected", "Select a draft first.")
+            return
+
+        if not self.current_is_draft():
+            QMessageBox.information(
+                self,
+                "Not a draft",
+                "Only drafts can be published.",
+            )
+            return
+
+        self.save_current_post()
+
+        errors = validate_post_file(self.current_path)
+        if errors:
+            QMessageBox.warning(
+                self,
+                "Validation failed",
+                "Fix these issues before publishing:\n\n" + "\n".join(errors),
+            )
+            return
+
+        default_message = f"Add blog post: {self.current_path.stem}"
+        dialog = PublishDialog(default_message)
+
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        should_push = QMessageBox.question(
+            self,
+            "Push to GitHub?",
+            "Publish, commit, and push this post to GitHub?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+
+        try:
+            validate_git_repo(self.config.site_repo_path, self.config.branch)
+
+            published_path, _draft_path = publish_draft(
+                config=self.config,
+                slug_or_filename=self.current_path.stem,
+            )
+
+            if should_push == QMessageBox.StandardButton.Yes:
+                commit_and_push(
+                    repo_path=self.config.site_repo_path,
+                    files=[published_path],
+                    message=dialog.commit_message or f"Add blog post: {published_path.stem}",
+                )
+
+                self.statusBar().showMessage(
+                    f"Published and pushed {published_path.name}",
+                    5000,
+                )
+            else:
+                self.statusBar().showMessage(
+                    f"Published locally: {published_path.name}",
+                    5000,
+                )
+
+            self.refresh_posts()
+            self.load_path(published_path)
+
+        except Exception as exc:
+            QMessageBox.critical(self, "Publish failed", str(exc))
     
 
 
