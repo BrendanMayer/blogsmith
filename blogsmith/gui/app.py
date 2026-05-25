@@ -520,7 +520,7 @@ def main() -> None:
     app = QApplication(sys.argv)
     app.setStyleSheet("""
     QMainWindow {
-        background: #f6f6f6;
+        background: gray;
     }
 
     QListWidget {
