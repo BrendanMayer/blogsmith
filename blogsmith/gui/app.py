@@ -383,6 +383,42 @@ class BlogsmithWindow(QMainWindow):
 
 def main() -> None:
     app = QApplication(sys.argv)
+    app.setStyleSheet("""
+    QMainWindow {
+        background: #f6f6f6;
+    }
+
+    QListWidget {
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        padding: 6px;
+        background: black;
+    }
+
+    QTextEdit {
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        padding: 10px;
+        font-family: Consolas, monospace;
+        font-size: 14px;
+        background: black;
+    }
+
+    QPushButton {
+        padding: 8px 10px;
+        border-radius: 8px;
+        background: #222;
+        color: white;
+    }
+
+    QPushButton:hover {
+        background: #444;
+    }
+
+    QLabel {
+        font-size: 14px;
+    }
+    """)
     window = BlogsmithWindow()
     window.show()
     sys.exit(app.exec())
