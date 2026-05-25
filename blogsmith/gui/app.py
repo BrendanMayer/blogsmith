@@ -4,11 +4,16 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
+    QDialog,
+    QDialogButtonBox,
+    QFormLayout,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QListWidget,
     QListWidgetItem,
     QMainWindow,
+    QMessageBox,
     QPushButton,
     QTextEdit,
     QVBoxLayout,
@@ -16,11 +21,56 @@ from PySide6.QtWidgets import (
 )
 
 from blogsmith.config import load_config
-from blogsmith.posts import list_drafts, list_posts
+from blogsmith.posts import create_draft, list_drafts, list_posts
 
 
 FILE_PATH_ROLE = Qt.ItemDataRole.UserRole
 
+def parse_tags(raw_tags: str) -> list[str]:
+    return [tag.strip() for tag in raw_tags.split(",") if tag.strip()]
+
+
+class NewDraftDialog(QDialog):
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.setWindowTitle("New Draft")
+
+        self.title_input = QLineEdit()
+        self.tags_input = QLineEdit()
+        self.excerpt_input = QTextEdit()
+        self.excerpt_input.setFixedHeight(90)
+
+        form = QFormLayout()
+        form.addRow("Title", self.title_input)
+        form.addRow("Tags", self.tags_input)
+        form.addRow("Excerpt", self.excerpt_input)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel
+        )
+
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+
+        layout = QVBoxLayout()
+        layout.addLayout(form)
+        layout.addWidget(buttons)
+
+        self.setLayout(layout)
+
+    @property
+    def title(self) -> str:
+        return self.title_input.text().strip()
+
+    @property
+    def tags(self) -> list[str]:
+        return parse_tags(self.tags_input.text())
+
+    @property
+    def excerpt(self) -> str:
+        return self.excerpt_input.toPlainText().strip()
 
 class BlogsmithWindow(QMainWindow):
     def __init__(self) -> None:
@@ -73,6 +123,7 @@ class BlogsmithWindow(QMainWindow):
         self.setCentralWidget(root)
 
         self.post_list.itemClicked.connect(self.load_selected_post)
+        self.new_button.clicked.connect(self.open_new_draft_dialog)
         self.save_button.clicked.connect(self.save_current_post)
 
         self.refresh_posts()
@@ -92,7 +143,9 @@ class BlogsmithWindow(QMainWindow):
 
     def load_selected_post(self, item: QListWidgetItem) -> None:
         path = Path(item.data(FILE_PATH_ROLE))
+        self.load_path(path)
 
+    def load_path(self, path: Path) -> None:
         self.current_path = path
         self.file_label.setText(str(path))
         self.editor.setPlainText(path.read_text(encoding="utf-8"))
@@ -108,6 +161,31 @@ class BlogsmithWindow(QMainWindow):
         )
 
         self.statusBar().showMessage(f"Saved {self.current_path.name}", 3000)
+        
+    def open_new_draft_dialog(self) -> None:
+        dialog = NewDraftDialog()
+
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        if not dialog.title:
+            QMessageBox.warning(self, "Missing title", "Please enter a title.")
+            return
+
+        try:
+            path = create_draft(
+                config=self.config,
+                title=dialog.title,
+                tags=dialog.tags,
+                excerpt=dialog.excerpt,
+            )
+        except Exception as exc:
+            QMessageBox.critical(self, "Could not create draft", str(exc))
+            return
+
+        self.refresh_posts()
+        self.load_path(path)
+        self.statusBar().showMessage(f"Created draft {path.name}", 3000)
 
 
 def main() -> None:
