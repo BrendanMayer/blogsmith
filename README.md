@@ -57,3 +57,34 @@ blogsmith validate building-a-unity-dialogue-system
 blogsmith status
 blogsmith publish building-a-unity-dialogue-system --push --message "Add dialogue system blog post"
 
+## Desktop editor
+
+Start the desktop editor:
+
+```bash
+blogsmith-gui
+```
+
+The desktop editor can:
+
+- create drafts
+- edit Markdown
+- save posts
+- preview Markdown
+- validate front matter
+- publish drafts into _posts
+- optionally commit and push using local Git authentication
+
+## Desktop workflow
+
+- Run blogsmith-gui.
+- Click New to create a draft.
+- Write or edit Markdown.
+- Click Save.
+- Click Preview to check formatting.
+- Click Validate to check required front matter.
+- Click Publish to move the draft into _posts.
+- Choose whether to commit and push to GitHub.
+
+Blogsmith does not store GitHub tokens. It uses your existing local Git setup.
+
