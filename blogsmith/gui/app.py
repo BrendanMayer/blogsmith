@@ -321,6 +321,8 @@ class BlogsmithWindow(QMainWindow):
         self.current_path = path
         self.file_label.setText(str(path))
         self.editor.setPlainText(path.read_text(encoding="utf-8"))
+        self.update_word_count()
+        self.update_live_preview()
         
     def save_current_post(self) -> None:
         if self.current_path is None:
@@ -365,56 +367,32 @@ class BlogsmithWindow(QMainWindow):
             return
 
         self.save_current_post()
+        self.update_live_preview()
+        self.preview_tabs.setCurrentWidget(self.preview_browser)
+        self.statusBar().showMessage("Preview updated.", 3000)
+            
+        def validate_current_post(self) -> None:
+            if self.current_path is None:
+                QMessageBox.information(self, "No file selected", "Select a post first.")
+                return
 
-        try:
-            post = frontmatter.loads(
-                self.current_path.read_text(encoding="utf-8")
-            )
-            body_html = markdown.markdown(
-                post.content,
-                extensions=["fenced_code", "tables", "toc"],
-            )
-        except Exception as exc:
-            QMessageBox.critical(self, "Preview failed", str(exc))
-            return
+            self.save_current_post()
 
-        title = post.metadata.get("title", self.current_path.stem)
+            errors = validate_post_file(self.current_path)
 
-        html = f"""
-        <html>
-          <body style="font-family: system-ui; line-height: 1.6;">
-            <h1>{title}</h1>
-            <hr>
-            {body_html}
-          </body>
-        </html>
-        """
+            if errors:
+                QMessageBox.warning(
+                    self,
+                    "Validation failed",
+                    "\n".join(errors),
+                )
+                return
 
-        dialog = PreviewDialog(title=title, html=html)
-        dialog.exec()
-        
-    def validate_current_post(self) -> None:
-        if self.current_path is None:
-            QMessageBox.information(self, "No file selected", "Select a post first.")
-            return
-
-        self.save_current_post()
-
-        errors = validate_post_file(self.current_path)
-
-        if errors:
-            QMessageBox.warning(
+            QMessageBox.information(
                 self,
-                "Validation failed",
-                "\n".join(errors),
+                "Validation passed",
+                "This post looks ready.",
             )
-            return
-
-        QMessageBox.information(
-            self,
-            "Validation passed",
-            "This post looks ready.",
-        )
         
     def publish_current_post(self) -> None:
         if self.current_path is None:
@@ -483,6 +461,28 @@ class BlogsmithWindow(QMainWindow):
 
         except Exception as exc:
             QMessageBox.critical(self, "Publish failed", str(exc))
+            
+    def on_editor_changed(self) -> None:
+        self.update_word_count()
+        self.validation_label.setText("Validation: Not checked")
+        self.preview_timer.start()
+
+    def update_word_count(self) -> None:
+        text = self.editor.toPlainText()
+        body = text
+        try:
+            post = frontmatter.loads(text)
+            body = post.content
+        except Exception:
+            pass
+
+        words = [word for word in body.split() if word.strip()]
+        self.word_count_label.setText(f"Words: {len(words)}")
+
+    def update_live_preview(self) -> None:
+        fallback_title = self.current_path.stem if self.current_path else "Untitled"
+        html = render_preview_html(self.editor.toPlainText(), fallback_title)
+        self.preview_browser.setHtml(html)
     
 
 
