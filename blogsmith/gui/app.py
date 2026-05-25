@@ -411,10 +411,10 @@ class BlogsmithWindow(QMainWindow):
             return
 
         self.save_current_post()
-
         errors = validate_post_file(self.current_path)
 
         if errors:
+            self.validation_label.setText("Validation: Failed")
             QMessageBox.warning(
                 self,
                 "Validation failed",
@@ -422,6 +422,7 @@ class BlogsmithWindow(QMainWindow):
             )
             return
 
+        self.validation_label.setText("Validation: Passed")
         QMessageBox.information(
             self,
             "Validation passed",
