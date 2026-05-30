@@ -27,13 +27,26 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
+      - name: Verify package import
+        run: |
+          python -c "import blogsmith; import blogsmith.gui.app; print('Blogsmith import OK')"
+
       - name: Build Blogsmith EXE
         run: |
-          pyinstaller `
+          python -m PyInstaller `
             --name Blogsmith `
             --windowed `
             --onefile `
+            --paths . `
+            --collect-submodules blogsmith `
             tools\blogsmith_gui_entry.py
+
+      - name: Smoke test EXE exists
+        shell: pwsh
+        run: |
+          if (!(Test-Path "dist\Blogsmith.exe")) {
+            throw "Blogsmith.exe was not created"
+          }
 
       - name: Rename EXE with version
         shell: pwsh

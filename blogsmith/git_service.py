@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import subprocess
 from pathlib import Path
 
@@ -47,7 +49,14 @@ def ensure_clean_working_tree(repo_path: Path) -> None:
         )
 
 
-def commit_and_push(repo_path: Path, files: list[Path], message: str) -> None:
+def commit_and_push(
+    repo_path: Path,
+    files: list[Path],
+    message: str,
+    remote_name: str = "origin",
+    branch: str = "main",
+    push: bool = True,
+) -> None:
     repo_root = repo_path.resolve()
 
     relative_files = [
@@ -57,10 +66,13 @@ def commit_and_push(repo_path: Path, files: list[Path], message: str) -> None:
 
     run_git(["add", *relative_files], repo_path)
     run_git(["commit", "-m", message], repo_path)
-    run_git(["push"], repo_path)
-    
-def remote_url(repo_path: Path) -> str:
-    return run_git(["remote", "get-url", "origin"], repo_path)
+
+    if push:
+        run_git(["push", remote_name, branch], repo_path)
+
+
+def remote_url(repo_path: Path, remote_name: str = "origin") -> str:
+    return run_git(["remote", "get-url", remote_name], repo_path)
 
 
 def latest_commit(repo_path: Path) -> str:
