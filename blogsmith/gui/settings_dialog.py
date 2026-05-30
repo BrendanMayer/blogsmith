@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFileDialog,
     QFormLayout,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -24,7 +25,22 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
 
         self.setWindowTitle("Blogsmith Settings")
+        self.setMinimumWidth(720)
+
         self.settings = settings
+
+        title = QLabel("Workspace Settings")
+        title.setObjectName("AppTitle")
+
+        subtitle = QLabel(
+            "Connect Blogsmith to a local portfolio repository and choose where posts are stored."
+        )
+        subtitle.setObjectName("AppSubtitle")
+        subtitle.setWordWrap(True)
+
+        header = QVBoxLayout()
+        header.addWidget(title)
+        header.addWidget(subtitle)
 
         self.repo_input = QLineEdit(settings.site_repo_path)
         self.repo_input.setPlaceholderText(
@@ -93,6 +109,7 @@ class SettingsDialog(QDialog):
         )
 
         form = QFormLayout()
+        form.setSpacing(14)
         form.addRow("Portfolio repo", repo_row)
         form.addRow("Drafts folder", self.drafts_input)
         form.addRow("Posts folder", self.posts_input)
@@ -102,12 +119,21 @@ class SettingsDialog(QDialog):
         form.addRow("Git author name", self.author_name_input)
         form.addRow("Git author email", self.author_email_input)
 
+        card = QFrame()
+        card.setObjectName("Panel")
+
+        card_layout = QVBoxLayout()
+        card_layout.setContentsMargins(22, 22, 22, 22)
+        card_layout.setSpacing(16)
+        card_layout.addLayout(form)
+        card_layout.addWidget(self.auto_push_checkbox)
+        card.setLayout(card_layout)
+
         help_text = QLabel(
-            "Choose the local Git repository for your portfolio or blog site. "
-            "Blogsmith will create drafts, publish posts, commit changes, and "
-            "optionally push to GitHub from this folder. It uses your existing "
-            "local Git authentication."
+            "Blogsmith uses your existing local Git authentication. "
+            "Before publishing, make sure you can push from this repo in a terminal."
         )
+        help_text.setObjectName("MutedLabel")
         help_text.setWordWrap(True)
 
         buttons = QDialogButtonBox(
@@ -118,9 +144,11 @@ class SettingsDialog(QDialog):
         buttons.rejected.connect(self.reject)
 
         layout = QVBoxLayout()
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(18)
+        layout.addLayout(header)
+        layout.addWidget(card)
         layout.addWidget(help_text)
-        layout.addLayout(form)
-        layout.addWidget(self.auto_push_checkbox)
         layout.addWidget(buttons)
 
         self.setLayout(layout)

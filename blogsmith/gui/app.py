@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QFormLayout,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -20,6 +21,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QSizePolicy,
     QSplitter,
     QTabWidget,
     QTextBrowser,
@@ -31,6 +33,7 @@ from PySide6.QtWidgets import (
 from blogsmith.config import BlogsmithConfig
 from blogsmith.git_service import commit_and_push, validate_git_repo
 from blogsmith.gui.settings_dialog import SettingsDialog
+from blogsmith.gui.theme import apply_theme
 from blogsmith.posts import create_draft, list_drafts, list_posts, publish_draft
 from blogsmith.settings import is_configured, load_settings, save_settings
 from blogsmith.validation import validate_post_file
@@ -68,70 +71,112 @@ def render_preview_html(markdown_text: str, fallback_title: str = "Untitled") ->
             <meta charset="utf-8">
             <style>
                 body {{
-                    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-                    line-height: 1.65;
-                    padding: 24px;
-                    color: #f2f2f2;
-                    background: #111;
+                    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                    line-height: 1.72;
+                    padding: 32px;
+                    color: #e5e7eb;
+                    background: #020617;
                 }}
 
-                h1, h2, h3 {{
+                .container {{
+                    max-width: 860px;
+                    margin: 0 auto;
+                }}
+
+                h1 {{
+                    font-size: 42px;
+                    line-height: 1.1;
+                    margin-bottom: 12px;
+                    color: #f8fafc;
+                }}
+
+                h2, h3 {{
                     line-height: 1.25;
+                    color: #f8fafc;
+                    margin-top: 32px;
+                }}
+
+                p {{
+                    color: #cbd5e1;
+                    font-size: 16px;
+                }}
+
+                a {{
+                    color: #60a5fa;
                 }}
 
                 pre {{
-                    background: #1f1f1f;
-                    padding: 14px;
-                    border-radius: 8px;
+                    background: #0f172a;
+                    border: 1px solid #1e293b;
+                    padding: 16px;
+                    border-radius: 14px;
                     overflow-x: auto;
                 }}
 
                 code {{
-                    font-family: Consolas, monospace;
+                    font-family: Consolas, "Cascadia Mono", monospace;
+                    color: #bfdbfe;
                 }}
 
                 img {{
                     max-width: 100%;
-                    border-radius: 8px;
+                    border-radius: 14px;
+                    border: 1px solid #1e293b;
                 }}
 
                 blockquote {{
-                    border-left: 4px solid #666;
-                    padding-left: 12px;
-                    color: #ccc;
+                    border-left: 4px solid #3b82f6;
+                    padding-left: 16px;
+                    color: #cbd5e1;
+                    margin-left: 0;
                 }}
 
                 table {{
                     border-collapse: collapse;
                     width: 100%;
+                    margin: 20px 0;
                 }}
 
                 th, td {{
-                    border: 1px solid #444;
-                    padding: 8px;
+                    border: 1px solid #334155;
+                    padding: 10px;
+                }}
+
+                th {{
+                    background: #0f172a;
+                    color: #f8fafc;
                 }}
 
                 .meta {{
-                    color: #aaa;
-                    border-bottom: 1px solid #333;
-                    margin-bottom: 24px;
-                    padding-bottom: 16px;
+                    color: #94a3b8;
+                    border: 1px solid #1e293b;
+                    background: #0f172a;
+                    margin-bottom: 28px;
+                    padding: 16px;
+                    border-radius: 16px;
+                }}
+
+                .meta p {{
+                    margin: 6px 0;
+                    color: #94a3b8;
                 }}
 
                 .excerpt {{
                     font-style: italic;
-                    color: #ccc;
+                    color: #cbd5e1;
                 }}
             </style>
         </head>
         <body>
-            <h1>{title}</h1>
-            <div class="meta">
-                <p><strong>Date:</strong> {date}</p>
-                <p><strong>Tags:</strong> {tag_text}</p>
-                <p class="excerpt"><strong>Excerpt:</strong> {excerpt}</p>
-            </div>
-            {body_html}
+            <main class="container">
+                <h1>{title}</h1>
+                <div class="meta">
+                    <p><strong>Date:</strong> {date}</p>
+                    <p><strong>Tags:</strong> {tag_text}</p>
+                    <p class="excerpt"><strong>Excerpt:</strong> {excerpt}</p>
+                </div>
+                {body_html}
+            </main>
         </body>
         </html>
         """
@@ -139,7 +184,7 @@ def render_preview_html(markdown_text: str, fallback_title: str = "Untitled") ->
     except Exception as exc:
         return f"""
         <html>
-        <body style="font-family: system-ui; padding: 24px;">
+        <body style="font-family: system-ui; padding: 24px; background: #020617; color: #e5e7eb;">
             <h2>Preview error</h2>
             <p>{exc}</p>
         </body>
@@ -151,7 +196,14 @@ class NewDraftDialog(QDialog):
     def __init__(self) -> None:
         super().__init__()
 
-        self.setWindowTitle("New Draft")
+        self.setWindowTitle("Create New Draft")
+        self.setMinimumWidth(620)
+
+        title = QLabel("Create Draft")
+        title.setObjectName("AppTitle")
+
+        subtitle = QLabel("Start a polished portfolio blog post with clean front matter.")
+        subtitle.setObjectName("AppSubtitle")
 
         self.title_input = QLineEdit()
         self.title_input.setPlaceholderText("Example: Building a Unity Dialogue System")
@@ -168,7 +220,7 @@ class NewDraftDialog(QDialog):
         )
 
         self.excerpt_input = QTextEdit()
-        self.excerpt_input.setFixedHeight(90)
+        self.excerpt_input.setFixedHeight(110)
         self.excerpt_input.setPlaceholderText(
             "Example: How I built a lightweight dialogue system for Unity with branching choices and reusable nodes."
         )
@@ -178,9 +230,17 @@ class NewDraftDialog(QDialog):
         )
 
         form = QFormLayout()
+        form.setSpacing(14)
         form.addRow("Title", self.title_input)
         form.addRow("Tags", self.tags_input)
-        form.addRow("Excerpt / summary", self.excerpt_input)
+        form.addRow("Excerpt", self.excerpt_input)
+
+        card = QFrame()
+        card.setObjectName("Panel")
+        card_layout = QVBoxLayout()
+        card_layout.setContentsMargins(22, 22, 22, 22)
+        card_layout.addLayout(form)
+        card.setLayout(card_layout)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok
@@ -190,7 +250,11 @@ class NewDraftDialog(QDialog):
         buttons.rejected.connect(self.reject)
 
         layout = QVBoxLayout()
-        layout.addLayout(form)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(18)
+        layout.addWidget(title)
+        layout.addWidget(subtitle)
+        layout.addWidget(card)
         layout.addWidget(buttons)
 
         self.setLayout(layout)
@@ -213,6 +277,13 @@ class PublishDialog(QDialog):
         super().__init__()
 
         self.setWindowTitle("Publish Draft")
+        self.setMinimumWidth(620)
+
+        title = QLabel("Publish Draft")
+        title.setObjectName("AppTitle")
+
+        subtitle = QLabel("Validate, commit, and optionally push this post to GitHub.")
+        subtitle.setObjectName("AppSubtitle")
 
         self.message_input = QLineEdit(default_message)
         self.message_input.setPlaceholderText(
@@ -231,7 +302,17 @@ class PublishDialog(QDialog):
         )
 
         form = QFormLayout()
+        form.setSpacing(14)
         form.addRow("Commit message", self.message_input)
+
+        card = QFrame()
+        card.setObjectName("Panel")
+        card_layout = QVBoxLayout()
+        card_layout.setContentsMargins(22, 22, 22, 22)
+        card_layout.setSpacing(16)
+        card_layout.addLayout(form)
+        card_layout.addWidget(self.push_checkbox)
+        card.setLayout(card_layout)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok
@@ -241,8 +322,11 @@ class PublishDialog(QDialog):
         buttons.rejected.connect(self.reject)
 
         layout = QVBoxLayout()
-        layout.addLayout(form)
-        layout.addWidget(self.push_checkbox)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(18)
+        layout.addWidget(title)
+        layout.addWidget(subtitle)
+        layout.addWidget(card)
         layout.addWidget(buttons)
 
         self.setLayout(layout)
@@ -264,69 +348,54 @@ class BlogsmithWindow(QMainWindow):
         self.config: BlogsmithConfig | None = None
         self.current_path: Path | None = None
 
-        self.setWindowTitle("Blogsmith")
-        self.resize(1200, 800)
+        self.setWindowTitle("Blogsmith v5")
+        self.resize(1440, 900)
 
         self.post_list = QListWidget()
         self.editor = QTextEdit()
+        self.editor.setPlaceholderText(
+            "Choose a draft or create a new one. Then write something brilliant enough to justify Markdown."
+        )
+
         self.file_label = QLabel("No file selected")
+        self.file_label.setObjectName("FileLabel")
+
+        self.word_count_label = QLabel("Words: 0")
+        self.word_count_label.setObjectName("Pill")
+
+        self.validation_label = QLabel("Validation: Not checked")
+        self.validation_label.setObjectName("Pill")
 
         self.settings_button = QPushButton("Settings")
-        self.new_button = QPushButton("New")
+        self.new_button = QPushButton("New Draft")
         self.save_button = QPushButton("Save")
-        self.preview_button = QPushButton("Preview")
+        self.preview_button = QPushButton("Refresh Preview")
         self.validate_button = QPushButton("Validate")
         self.publish_button = QPushButton("Publish")
+
+        self.publish_button.setObjectName("PrimaryButton")
+
+        for button in [
+            self.settings_button,
+            self.new_button,
+            self.save_button,
+            self.preview_button,
+            self.validate_button,
+        ]:
+            button.setObjectName("SidebarButton")
 
         self.settings_button.setToolTip(
             "Configure your portfolio repository and publishing options."
         )
 
-        sidebar = QVBoxLayout()
-        sidebar.addWidget(QLabel("Posts"))
-        sidebar.addWidget(self.post_list)
-        sidebar.addWidget(self.settings_button)
-        sidebar.addWidget(self.new_button)
-        sidebar.addWidget(self.save_button)
-        sidebar.addWidget(self.preview_button)
-        sidebar.addWidget(self.validate_button)
-        sidebar.addWidget(self.publish_button)
-
-        sidebar_widget = QWidget()
-        sidebar_widget.setLayout(sidebar)
-        sidebar_widget.setFixedWidth(320)
-
-        self.preview_browser = QTextBrowser()
-        self.preview_browser.setOpenExternalLinks(True)
-
-        self.preview_tabs = QTabWidget()
-        self.preview_tabs.addTab(self.preview_browser, "Live Preview")
-
-        self.word_count_label = QLabel("Words: 0")
-        self.validation_label = QLabel("Validation: Not checked")
-
-        editor_header = QHBoxLayout()
-        editor_header.addWidget(self.file_label)
-        editor_header.addStretch()
-        editor_header.addWidget(self.word_count_label)
-        editor_header.addWidget(self.validation_label)
-
-        editor_layout = QVBoxLayout()
-        editor_layout.addLayout(editor_header)
-        editor_layout.addWidget(self.editor)
-
-        editor_widget = QWidget()
-        editor_widget.setLayout(editor_layout)
-
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.addWidget(editor_widget)
-        splitter.addWidget(self.preview_tabs)
-        splitter.setStretchFactor(0, 3)
-        splitter.setStretchFactor(1, 2)
+        sidebar = self.build_sidebar()
+        workspace = self.build_workspace()
 
         main_layout = QHBoxLayout()
-        main_layout.addWidget(sidebar_widget)
-        main_layout.addWidget(splitter)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+        main_layout.addWidget(sidebar)
+        main_layout.addWidget(workspace)
 
         root = QWidget()
         root.setLayout(main_layout)
@@ -361,6 +430,105 @@ class BlogsmithWindow(QMainWindow):
         else:
             self.set_app_enabled(False)
             self.open_settings_dialog(first_run=True)
+
+    def build_sidebar(self) -> QFrame:
+        sidebar_frame = QFrame()
+        sidebar_frame.setObjectName("Sidebar")
+        sidebar_frame.setFixedWidth(340)
+
+        app_title = QLabel("Blogsmith")
+        app_title.setObjectName("AppTitle")
+
+        app_subtitle = QLabel("Write. Preview. Publish.")
+        app_subtitle.setObjectName("AppSubtitle")
+
+        header_layout = QVBoxLayout()
+        header_layout.addWidget(app_title)
+        header_layout.addWidget(app_subtitle)
+
+        posts_title = QLabel("Library")
+        posts_title.setObjectName("SectionTitle")
+
+        button_layout = QVBoxLayout()
+        button_layout.setSpacing(8)
+        button_layout.addWidget(self.new_button)
+        button_layout.addWidget(self.save_button)
+        button_layout.addWidget(self.preview_button)
+        button_layout.addWidget(self.validate_button)
+        button_layout.addWidget(self.publish_button)
+        button_layout.addSpacing(10)
+        button_layout.addWidget(self.settings_button)
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(20, 24, 20, 20)
+        layout.setSpacing(18)
+        layout.addLayout(header_layout)
+        layout.addWidget(posts_title)
+        layout.addWidget(self.post_list, 1)
+        layout.addLayout(button_layout)
+
+        sidebar_frame.setLayout(layout)
+        return sidebar_frame
+
+    def build_workspace(self) -> QWidget:
+        self.preview_browser = QTextBrowser()
+        self.preview_browser.setOpenExternalLinks(True)
+
+        self.preview_tabs = QTabWidget()
+        self.preview_tabs.addTab(self.preview_browser, "Live Preview")
+
+        top_bar = QFrame()
+        top_bar.setObjectName("TopBar")
+
+        top_bar_layout = QHBoxLayout()
+        top_bar_layout.setContentsMargins(18, 14, 18, 14)
+        top_bar_layout.setSpacing(12)
+        top_bar_layout.addWidget(self.file_label, 1)
+        top_bar_layout.addWidget(self.word_count_label)
+        top_bar_layout.addWidget(self.validation_label)
+        top_bar.setLayout(top_bar_layout)
+
+        editor_title = QLabel("Editor")
+        editor_title.setObjectName("SectionTitle")
+
+        preview_title = QLabel("Preview")
+        preview_title.setObjectName("SectionTitle")
+
+        editor_panel = QFrame()
+        editor_panel.setObjectName("Panel")
+        editor_panel_layout = QVBoxLayout()
+        editor_panel_layout.setContentsMargins(16, 16, 16, 16)
+        editor_panel_layout.setSpacing(12)
+        editor_panel_layout.addWidget(editor_title)
+        editor_panel_layout.addWidget(self.editor)
+        editor_panel.setLayout(editor_panel_layout)
+
+        preview_panel = QFrame()
+        preview_panel.setObjectName("Panel")
+        preview_panel_layout = QVBoxLayout()
+        preview_panel_layout.setContentsMargins(16, 16, 16, 16)
+        preview_panel_layout.setSpacing(12)
+        preview_panel_layout.addWidget(preview_title)
+        preview_panel_layout.addWidget(self.preview_tabs)
+        preview_panel.setLayout(preview_panel_layout)
+
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.addWidget(editor_panel)
+        splitter.addWidget(preview_panel)
+        splitter.setStretchFactor(0, 3)
+        splitter.setStretchFactor(1, 2)
+
+        workspace_layout = QVBoxLayout()
+        workspace_layout.setContentsMargins(22, 22, 22, 22)
+        workspace_layout.setSpacing(16)
+        workspace_layout.addWidget(top_bar)
+        workspace_layout.addWidget(splitter, 1)
+
+        workspace = QWidget()
+        workspace.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        workspace.setLayout(workspace_layout)
+
+        return workspace
 
     def require_config(self) -> BlogsmithConfig | None:
         if self.config is None:
@@ -441,12 +609,12 @@ class BlogsmithWindow(QMainWindow):
         self.post_list.clear()
 
         for draft in list_drafts(config):
-            item = QListWidgetItem(f"Draft | {draft.name}")
+            item = QListWidgetItem(f"Draft    {draft.name}")
             item.setData(FILE_PATH_ROLE, str(draft))
             self.post_list.addItem(item)
 
         for post in list_posts(config):
-            item = QListWidgetItem(f"Post | {post.name}")
+            item = QListWidgetItem(f"Post      {post.name}")
             item.setData(FILE_PATH_ROLE, str(post))
             self.post_list.addItem(item)
 
@@ -649,77 +817,7 @@ class BlogsmithWindow(QMainWindow):
 
 def main() -> None:
     app = QApplication(sys.argv)
-
-    app.setStyleSheet(
-        """
-        QMainWindow {
-            background: #2f2f2f;
-        }
-
-        QListWidget {
-            border: 1px solid #555;
-            border-radius: 8px;
-            padding: 6px;
-            background: #111;
-            color: white;
-        }
-
-        QTextEdit {
-            border: 1px solid #555;
-            border-radius: 8px;
-            padding: 10px;
-            font-family: Consolas, monospace;
-            font-size: 14px;
-            background: #111;
-            color: white;
-        }
-
-        QTextBrowser {
-            border: 1px solid #555;
-            border-radius: 8px;
-            background: #111;
-            color: white;
-        }
-
-        QPushButton {
-            padding: 8px 10px;
-            border-radius: 8px;
-            background: #222;
-            color: white;
-        }
-
-        QPushButton:hover {
-            background: #444;
-        }
-
-        QPushButton:disabled {
-            background: #333;
-            color: #777;
-        }
-
-        QLabel {
-            font-size: 14px;
-            color: white;
-        }
-
-        QTabWidget::pane {
-            border: 1px solid #555;
-            border-radius: 8px;
-        }
-
-        QTabBar::tab {
-            background: #222;
-            color: white;
-            padding: 8px 12px;
-            border-top-left-radius: 8px;
-            border-top-right-radius: 8px;
-        }
-
-        QTabBar::tab:selected {
-            background: #444;
-        }
-        """
-    )
+    apply_theme(app)
 
     window = BlogsmithWindow()
     window.show()
